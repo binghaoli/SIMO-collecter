@@ -67,6 +67,9 @@ public class ServerThread extends Thread {
 	private boolean saveSample(WifiSample sample) {
 
 		try {
+			//add somthing here
+
+
 			//insert the device mac into its table
 			String dotlessMac = removeDots(sample.getDeviceMac());
 			Statement stmt = mConnection.createStatement();
