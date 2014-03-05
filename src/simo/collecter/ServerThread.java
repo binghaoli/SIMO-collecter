@@ -67,43 +67,81 @@ public class ServerThread extends Thread {
 	 */
 	private boolean saveSample(WifiSample sample) {
 
+		/*
+		String dotlessMac = removeDots(sample.getDeviceMac());
 		try {
-			//add somthing here
-
-
+			Statement stmt = mConnection.createStatement();
+			int retCode1 = stmt.executeUpdate(String.format(
+				"INSERT INTO device_mac(mac, mac_string) VALUES ('%d', '%s')", Long.parseLong(dotlessMac, 16), sample.getDeviceMac()));
+			if (retCode1 != 1) {
+				System.err.println("Failed to insert new device in device_mac table");
+			}	
+		}catch (SQLException e) {
+			System.err.println("Unable to execute save device_mac query");
+			e.printStackTrace();
+		} */
+		
+		try {
+			
 			//insert the device mac into its table
 			String dotlessMac = removeDots(sample.getDeviceMac());
-			Statement stmt = mConnection.createStatement();
-			int retCode = stmt.executeUpdate(String.format(
-					"INSERT INTO device_mac(mac) VALUES (x'%s')", dotlessMac));
-			if (retCode != 1) {
-				System.err.println("Failed to insert new device in device_mac table");
+			
+			//if this is a new device
+			//added by Binghao
+			Statement bhstmt = mConnection.createStatement();
+			ResultSet rs = bhstmt.executeQuery(String.format(
+					"SELECT * FROM device_mac WHERE mac_string = '%s'", sample.getDeviceMac()));
+					
+			if (!rs.next()){
+				Statement stmt = mConnection.createStatement();
+				int retCode1 = stmt.executeUpdate(String.format(
+					"INSERT INTO device_mac(mac, mac_string) VALUES ('%d', '%s')", Long.parseLong(dotlessMac, 16), sample.getDeviceMac()));
+				if (retCode1 != 1) {
+					System.err.println("Failed to insert new device in device_mac table");
+				}
 			}
+			
+			
 			//build the INSERT statement with the correct parameters
 			PreparedStatement pStmt = mConnection.prepareStatement(
 					String.format("INSERT INTO samples(timestamp, infra_mac, device_mac, rssi) " + 
-					 "SELECT ?,id,(x'%s'),? FROM infrastructure WHERE mac = ? LIMIT 1", dotlessMac));
+					 "SELECT ?,id,('%d'),? FROM infrastructure WHERE mac = ? LIMIT 1", Long.parseLong(dotlessMac, 16)));
 			pStmt.setLong(1, sample.getTimestamp());
-			pStmt.setInt(3, sample.getRssi());
-			pStmt.setString(4, sample.getInfrastructureMac());
+			pStmt.setInt(2, sample.getRssi());
+			pStmt.setString(3, sample.getInfrastructureMac());
 			//execute the update and save the return code to check for success
-			retCode = pStmt.executeUpdate();
+			int retCode = pStmt.executeUpdate();
 			//check the return code and quit the routine accordingly
 			if (retCode != 1) {
 				System.err.println("Failed to insert sample, retCode=" + retCode);
 				return false;
+			}	else{
+				System.out.println("Successfully inserted one sample");
+				return true;
 			}
-			return true;
 		} catch (SQLException e) {
-			System.err.println("Unable to execute save query");
+			System.err.println("Unable to execute save samples query");
 			e.printStackTrace();
 		} 
 
 		return false;
 	}
 	
+	//private String removeDots(String mac) {
+	//	return mac.replace(':', '\0');
+	//}
+	//modified by Binghao
 	private String removeDots(String mac) {
-		return mac.replace(':', '\0');
+		StringBuilder sb = new StringBuilder(mac);
+		sb.deleteCharAt(14);
+		sb.deleteCharAt(11);
+		sb.deleteCharAt(8);
+		sb.deleteCharAt(5);
+		sb.deleteCharAt(2);
+		mac = sb.toString();
+		return mac;
 	}
+	
+	
 
 }
